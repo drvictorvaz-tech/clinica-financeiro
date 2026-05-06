@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IA Financeira — Chat</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', sans-serif; background: #0d1117; color: #e6edf3; height: 100vh; display: flex; flex-direction: column; }
+  header { background: #161b22; border-bottom: 1px solid #30363d; padding: 14px 20px; display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
+  .header-left { display: flex; align-items: center; gap: 12px; }
+  .header-left h1 { font-size: 17px; font-weight: 600; }
+  .clinica-sel { background: #21262d; border: 1px solid #30363d; color: #e6edf3; border-radius: 8px; padding: 6px 12px; font-size: 13px; cursor: pointer; outline: none; }
+  .header-right { display: flex; align-items: center; gap: 10px; font-size: 13px; color: #8b949e; }
+  .nav-link { color: #58a6ff; text-decoration: none; font-size: 13px; padding: 5px 10px; border-radius: 6px; transition: background 0.15s; }
+  .nav-link:hover { background: rgba(88,166,255,0.1); }
+  .chat-wrap { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 14px; }
+  .msg { max-width: 75%; display: flex; flex-direction: column; gap: 4px; }
+  .msg.user { align-self: flex-end; align-items: flex-end; }
+  .msg.bot  { align-self: flex-start; align-items: flex-start; }
+  .bubble { padding: 12px 16px; border-radius: 14px; font-size: 14px; line-height: 1.55; white-space: pre-wrap; word-break: break-word; }
+  .msg.user .bubble { background: #1f6feb; color: #fff; border-bottom-right-radius: 4px; }
+  .msg.bot  .bubble { background: #21262d; border: 1px solid #30363d; border-bottom-left-radius: 4px; }
+  .ts { font-size: 11px; color: #8b949e; }
+  .duvida { background: rgba(210,153,34,0.15); border: 1px solid rgba(210,153,34,0.4); border-radius: 8px; padding: 8px 12px; font-size: 13px; color: #e3b341; margin-top: 4px; }
+  .typing { display: flex; gap: 5px; align-items: center; padding: 12px 16px; }
+  .typing span { width: 7px; height: 7px; background: #8b949e; border-radius: 50%; animation: bounce 1.2s infinite; }
+  .typing span:nth-child(2) { animation-delay: 0.2s; }
+  .typing span:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes bounce { 0%,80%,100%{transform:translateY(0)} 40%{transform:translateY(-7px)} }
+  .input-bar { background: #161b22; border-top: 1px solid #30363d; padding: 14px 20px; display: flex; gap: 10px; align-items: flex-end; flex-shrink: 0; }
+  textarea { flex: 1; background: #21262d; border: 1px solid #30363d; color: #e6edf3; border-radius: 10px; padding: 11px 14px; font-size: 14px; resize: none; max-height: 120px; outline: none; font-family: inherit; line-height: 1.4; transition: border 0.2s; }
+  textarea:focus { border-color: #1f6feb; }
+  .btn-send { background: #1f6feb; color: #fff; border: none; border-radius: 10px; padding: 11px 18px; font-size: 18px; cursor: pointer; transition: opacity 0.2s; flex-shrink: 0; }
+  .btn-send:hover { opacity: 0.85; }
+  .btn-send:disabled { opacity: 0.4; cursor: not-allowed; }
+  .upload-btn { background: #21262d; border: 1px solid #30363d; color: #8b949e; border-radius: 10px; padding: 11px 14px; cursor: pointer; font-size: 16px; transition: background 0.15s; flex-shrink: 0; }
+  .upload-btn:hover { background: #30363d; }
+  .suggestions { display: flex; gap: 8px; flex-wrap: wrap; padding: 12px 20px 0; flex-shrink: 0; }
+  .sug { background: #21262d; border: 1px solid #30363d; color: #8b949e; border-radius: 20px; padding: 5px 12px; font-size: 12px; cursor: pointer; transition: background 0.15s, color 0.15s; }
+  .sug:hover { background: #1f6feb20; color: #58a6ff; border-color: #1f6feb50; }
+</style>
+</head>
+<body>
+<header>
+  <div class="header-left">
+    <span>🤖</span>
+    <h1>IA Financeira</h1>
+    <select class="clinica-sel" id="clinicaSel"></select>
+  </div>
+  <div class="header-right">
+    <span id="userNome"></span>
+    <a href="/dashboard" class="nav-link">📊 Dashboard</a>
+    <a href="#" class="nav-link" id="btnLogout">Sair</a>
+  </div>
+</header>
+<div class="suggestions" id="sugs">
+  <div class="sug" onclick="enviarSug('Registrar despesa de aluguel R$ 4.500 este mês')">💸 Despesa de aluguel</div>
+  <div class="sug" onclick="enviarSug('Registrar receita de consulta R$ 600 hoje')">💰 Receita de consulta</div>
+  <div class="sug" onclick="enviarSug('Novo lead pelo Instagram: João Silva, (47) 99999-1234')">🎯 Novo lead</div>
+  <div class="sug" onclick="enviarSug('Emitir nota fiscal para Maria Santos CPF 123.456.789-00 valor R$ 800 serviço DTM')">📋 Emitir NFS-e</div>
+  <div class="sug" onclick="enviarSug('Como estamos este mês?')">📈 Resumo do mês</div>
+</div>
+<div class="chat-wrap" id="chat">
+  <div class="msg bot">
+    <div class="bubble">👋 Olá! Sou a <strong>IA Financeira</strong> da Clínica DTM &amp; Sono.
+
+Pode me dizer em linguagem natural:
+• Uma despesa ("Paguei R$ 500 de insumos hoje")
+• Uma receita ("Consulta DTM R$ 800")
+• Um lead ("Paciente novo via Instagram: Ana, (47) 9…")
+• Emitir nota fiscal ("NF para João, CPF …, valor R$ …")
+• Ver como estamos ("Como foi o mês?")
+
+Selecione a clínica acima e é só digitar! 💬</div>
+    <span class="ts">Sistema</span>
+  </div>
+</div>
+<div class="input-bar">
+  <label class="upload-btn" title="Enviar comprovante">
+    📎
+    <input type="file" id="fileInput" accept="image/*,.pdf" style="display:none" onchange="enviarArquivo(this)">
+  </label>
+  <textarea id="msgInput" placeholder="Ex: Paguei R$ 2.300 de folha hoje…" rows="1"
+    onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();enviar()}"
+    oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight,120)+'px'"></textarea>
+  <button class="btn-send" id="btnSend" onclick="enviar()">➤</button>
+</div>
+<script>
+let clinicaId = null, me = null;
+async function init() {
+  try {
+    const r = await fetch('/api/me', {credentials:'include'});
+    if (!r.ok) { window.location.href='/'; return; }
+    me = await r.json();
+    document.getElementById('userNome').textContent = me.nome;
+    const sel = document.getElementById('clinicaSel');
+    me.clinicas.forEach(c => { const o=document.createElement('option'); o.value=c.id; o.textContent=c.nome.replace('Clínica DTM & Sono — ',''); sel.appendChild(o); });
+    if (me.clinica_id) { sel.value=me.clinica_id; sel.disabled=true; }
+    clinicaId = parseInt(sel.value)||me.clinicas[0]?.id;
+    sel.addEventListener('change', () => { clinicaId=parseInt(sel.value); });
+  } catch(e) { window.location.href='/'; }
+}
+document.getElementById('btnLogout').addEventListener('click', async e => { e.preventDefault(); await fetch('/api/logout',{method:'POST',credentials:'include'}); window.location.href='/'; });
+function addMsg(text, from, duvida) {
+  const chat=document.getElementById('chat'), div=document.createElement('div');
+  div.className='msg '+from;
+  div.innerHTML='<div class="bubble">'+text.replace(/</g,'&lt;').replace(/\n/g,'<br>')+'</div><span class="ts">'+new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})+'</span>';
+  if(duvida){const dq=document.createElement('div');dq.className='duvida';dq.textContent='❓ '+duvida;div.appendChild(dq);}
+  chat.appendChild(div); chat.scrollTop=chat.scrollHeight;
+}
+function addTyping(){const chat=document.getElementById('chat'),div=document.createElement('div');div.className='msg bot';div.id='typing';div.innerHTML='<div class="bubble typing"><span></span><span></span><span></span></div>';chat.appendChild(div);chat.scrollTop=chat.scrollHeight;}
+function removeTyping(){document.getElementById('typing')?.remove();}
+async function enviar(){
+  const inp=document.getElementById('msgInput'), txt=inp.value.trim();
+  if(!txt||!clinicaId)return;
+  inp.value='';inp.style.height='auto';
+  document.getElementById('btnSend').disabled=true;
+  document.getElementById('sugs').style.display='none';
+  addMsg(txt,'user'); addTyping();
+  try{
+    const r=await fetch('/api/chat',{method:'POST',credentials:'include',headers:{'Content-Type':'application/json'},body:JSON.stringify({mensagem:txt,clinica_id:clinicaId})});
+    removeTyping();
+    const d=await r.json();
+    if(r.ok)addMsg(d.resposta,'bot',d.duvida);
+    else addMsg('⚠️ Erro: '+(d.detail||'Tente novamente'),'bot');
+  }catch(e){removeTyping();addMsg('⚠️ Erro de conexão.','bot');}
+  document.getElementById('btnSend').disabled=false;
+  document.getElementById('msgInput').focus();
+}
+async function enviarSug(txt){document.getElementById('msgInput').value=txt;await enviar();}
+async function enviarArquivo(input){
+  if(!input.files[0]||!clinicaId)return;
+  const file=input.files[0];
+  addMsg('📎 Enviando: '+file.name,'user'); addTyping();
+  const fd=new FormData();fd.append('arquivo',file);fd.append('clinica_id',clinicaId);fd.append('categoria','Outras');
+  try{const r=await fetch('/api/upload',{method:'POST',credentials:'include',body:fd});removeTyping();const d=await r.json();addMsg(d.resposta||'Arquivo recebido ✅','bot');}
+  catch(e){removeTyping();addMsg('⚠️ Erro no upload.','bot');}
+  input.value='';
+}
+init();
+</script>
+</body>
+</html>

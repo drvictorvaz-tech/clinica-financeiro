@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IA Financeira — Clínica DTM & Sono</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', sans-serif;
+    background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+    min-height: 100vh;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .card {
+    background: rgba(255,255,255,0.05);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 20px;
+    padding: 48px 40px;
+    width: 100%; max-width: 420px;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.4);
+  }
+  .logo { text-align: center; margin-bottom: 32px; }
+  .logo h1 { color: #fff; font-size: 22px; font-weight: 700; margin-bottom: 4px; }
+  .logo p { color: rgba(255,255,255,0.6); font-size: 13px; }
+  .logo .icon { font-size: 48px; margin-bottom: 12px; }
+  label { display: block; color: rgba(255,255,255,0.8); font-size: 13px; margin-bottom: 6px; margin-top: 18px; }
+  input {
+    width: 100%;
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 10px;
+    padding: 12px 16px;
+    color: #fff;
+    font-size: 15px;
+    outline: none;
+    transition: border 0.2s;
+  }
+  input:focus { border-color: #4fc3f7; }
+  input::placeholder { color: rgba(255,255,255,0.35); }
+  button {
+    width: 100%; margin-top: 28px;
+    background: linear-gradient(135deg, #0288d1, #0097a7);
+    color: #fff; border: none; border-radius: 10px;
+    padding: 14px; font-size: 16px; font-weight: 600;
+    cursor: pointer; transition: opacity 0.2s;
+  }
+  button:hover { opacity: 0.88; }
+  button:disabled { opacity: 0.5; cursor: not-allowed; }
+  .error {
+    background: rgba(229,57,53,0.2);
+    border: 1px solid rgba(229,57,53,0.4);
+    color: #ef9a9a;
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 13px;
+    margin-top: 16px;
+    display: none;
+  }
+  .version { text-align: center; color: rgba(255,255,255,0.3); font-size: 11px; margin-top: 24px; }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="logo">
+    <div class="icon">🦷</div>
+    <h1>Clínica DTM & Sono</h1>
+    <p>Sistema de Gestão — IA Financeira</p>
+  </div>
+  <form id="form">
+    <label>E-mail</label>
+    <input type="email" id="email" placeholder="seu@email.com.br" required autocomplete="email">
+    <label>Senha</label>
+    <input type="password" id="senha" placeholder="••••••••" required autocomplete="current-password">
+    <button type="submit" id="btn">Entrar</button>
+    <div class="error" id="erro"></div>
+  </form>
+  <div class="version">Dr. Victor Vaz · DTM & Sono · v1.0</div>
+</div>
+<script>
+  document.getElementById('form').addEventListener('submit', async e => {
+    e.preventDefault();
+    const btn = document.getElementById('btn');
+    const erro = document.getElementById('erro');
+    btn.disabled = true; btn.textContent = 'Entrando…';
+    erro.style.display = 'none';
+    try {
+      const r = await fetch('/api/login', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        credentials: 'include',
+        body: JSON.stringify({
+          email: document.getElementById('email').value.trim(),
+          senha: document.getElementById('senha').value
+        })
+      });
+      const d = await r.json();
+      if (r.ok) {
+        window.location.href = d.papel === 'admin' ? '/dashboard' : '/chat';
+      } else {
+        erro.textContent = d.detail || 'Email ou senha incorretos';
+        erro.style.display = 'block';
+      }
+    } catch(ex) {
+      erro.textContent = 'Erro de conexão. Tente novamente.';
+      erro.style.display = 'block';
+    }
+    btn.disabled = false; btn.textContent = 'Entrar';
+  });
+</script>
+</body>
+</html>
